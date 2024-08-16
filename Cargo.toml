@@ -1,0 +1,27 @@
+[package]
+name = "onebot_v11_oxidebot"
+version = "0.1.0"
+edition = "2021"
+description = "OnebotV11 Bot for oxidebot framework"
+license = "MIT OR Apache-2.0"
+authors = ["canxin121 <q1969730106@gmail.com>"]
+homepage = "https://github.com/canxin121/onebot_v11_oxidebot"
+repository = "https://github.com/canxin121/onebot_v11_oxidebot"
+readme = "Readme.md"
+keywords = ["bot", "chatbot", "oxidebot"]
+categories = [
+    "science::robotics",
+    "api-bindings",
+]
+
+[dependencies]
+anyhow = "1.0.86"
+oxidebot = "0.1.0" 
+chrono = "0.4.38"
+hyper = "1.4.1"
+mime_guess = "2.0.5"
+onebot_v11 = "0.1.2"    
+serde = "1.0.206"
+serde_json = "1.0.124"
+tokio = { version = "1.39.2", features = ["full"] }
+tracing = "0.1.40"
