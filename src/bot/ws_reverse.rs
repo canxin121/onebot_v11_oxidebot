@@ -80,18 +80,15 @@ impl BotTrait for OnebotV11ReverseWsBot {
         Box::pin(async move {
             let mut subscriber = self.connect.subscribe().await;
             while let Ok(event) = subscriber.recv().await {
-                match Matcher::new(
+                for matcher in Matcher::new(
                     Box::new(EventWrapper(Arc::new(event))),
                     <Self as BotTrait>::clone_box(self),
                 ) {
-                    Ok(matcher) => match sender.send(matcher).await {
+                    match sender.send(matcher).await {
                         Ok(_) => {}
                         Err(e) => {
                             tracing::error!("Onebotv11: Failed to send event: {:?}", e);
                         }
-                    },
-                    Err(e) => {
-                        tracing::error!("Onebotv11: Failed to create matcher: {:?}", e);
                     }
                 }
             }
@@ -105,7 +102,7 @@ impl BotTrait for OnebotV11ReverseWsBot {
     fn server(&self) -> &'static str {
         PLATFORM
     }
-    
+
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -133,7 +130,7 @@ impl CallApiTrait for OnebotV11ReverseWsBot {
         target: SendMessageTarget,
     ) -> ::core::pin::Pin<
         Box<
-            dyn ::core::future::Future<Output = Result<SendMessageResponse>>
+            dyn ::core::future::Future<Output = Result<Vec<SendMessageResponse>>>
                 + ::core::marker::Send
                 + 'async_trait,
         >,
@@ -185,9 +182,9 @@ impl CallApiTrait for OnebotV11ReverseWsBot {
                     )
                     | onebot_v11::api::resp::ApiRespData::SendGroupMsgResponse(
                         SendGroupMsgResponse { message_id },
-                    ) => Ok(SendMessageResponse {
+                    ) => Ok(vec![SendMessageResponse {
                         sent_message_id: message_id.to_string(),
-                    }),
+                    }]),
                     _ => Err(anyhow::anyhow!("Onebotv11: Unexpected response")),
                 }
             } else {
@@ -275,13 +272,7 @@ impl CallApiTrait for OnebotV11ReverseWsBot {
                                     sex: Some(Sex::from(
                                         resp.sender.sex.unwrap_or_default().as_str(),
                                     )),
-                                    age: resp.sender.age.and_then(|a| {
-                                        if a > u8::MAX as i32 {
-                                            Some(u8::MAX)
-                                        } else {
-                                            Some(a as u8)
-                                        }
-                                    }),
+                                    age: resp.sender.age.and_then(|a| Some(a as u64)),
                                     avatar: None,
                                     email: None,
                                     phone: None,
@@ -381,7 +372,7 @@ impl CallApiTrait for OnebotV11ReverseWsBot {
                                     profile: Some(UserProfile {
                                         nickname: Some(m.nickname),
                                         sex: Some(Sex::from(m.sex.as_str())),
-                                        age: Some(m.age as u8),
+                                        age: Some(m.age as u64),
                                         avatar: None,
                                         email: None,
                                         phone: None,
@@ -389,7 +380,6 @@ impl CallApiTrait for OnebotV11ReverseWsBot {
                                         level: None,
                                     }),
                                     group_info: Some(UserGroupInfo {
-                                        title: Some(m.title),
                                         role: Some(match m.role.to_lowercase().as_str() {
                                             "owner" => oxidebot::source::user::Role::Owner,
                                             "admin" => oxidebot::source::user::Role::Admin,
@@ -402,6 +392,7 @@ impl CallApiTrait for OnebotV11ReverseWsBot {
                                             0,
                                         ),
                                         level: Some(m.level),
+                                        alias: Some(m.title),
                                     }),
                                 })
                                 .collect(),
@@ -707,15 +698,15 @@ impl CallApiTrait for OnebotV11ReverseWsBot {
                     onebot_v11::api::resp::ApiRespData::GetGroupInfoResponse(resp) => {
                         Ok(GroupGetProfileResponse {
                             profile: oxidebot::source::group::GroupProfile {
-                                name: resp.group_name,
+                                name: Some(resp.group_name),
                                 avatar: None,
-                                member_account: {
+                                member_count: {
                                     if resp.member_count > u64::MAX as i64 {
-                                        u64::MAX
+                                        Some(u64::MAX)
                                     } else if resp.member_count < u64::MIN as i64 {
-                                        u64::MIN
+                                        Some(u64::MIN)
                                     } else {
-                                        resp.member_count as u64
+                                        Some(resp.member_count as u64)
                                     }
                                 },
                             },
@@ -748,18 +739,27 @@ impl CallApiTrait for OnebotV11ReverseWsBot {
         if new_profile.avatar.is_some() {
             tracing::warn!("Onebotv11: Set Group avatar is not supported");
         }
-        let payload = onebot_v11::api::payload::ApiPayload::SetGroupName(SetGroupName {
-            group_id: group_id.parse().unwrap_or_else(|e| {
-                tracing::error!(
-                    "Onebotv11: Failed to parse group id: {}, error: {}",
-                    group_id,
-                    e
-                );
-                Default::default()
-            }),
-            group_name: new_profile.name,
-        });
+        let payload = {
+            if let Some(new_name) = new_profile.name {
+                Some(onebot_v11::api::payload::ApiPayload::SetGroupName(
+                    SetGroupName {
+                        group_id: group_id.parse().unwrap_or_else(|e| {
+                            tracing::error!(
+                                "Onebotv11: Failed to parse group id: {}, error: {}",
+                                group_id,
+                                e
+                            );
+                            Default::default()
+                        }),
+                        group_name: new_name,
+                    },
+                ))
+            } else {
+                None
+            }
+        };
         Box::pin(async move {
+            let payload = payload.ok_or(anyhow::anyhow!("Onebotv11: No new name to set"))?;
             let resp = self.connect.clone().call_api(payload).await?;
             if resp.status == "ok" {
                 Ok(())
@@ -1080,15 +1080,7 @@ impl CallApiTrait for OnebotV11ReverseWsBot {
                             profile: UserProfile {
                                 nickname: Some(resp.nickname),
                                 sex: Some(Sex::from(resp.sex.as_str())),
-                                age: Some({
-                                    if resp.age > u8::MAX as i64 {
-                                        u8::MAX
-                                    } else if resp.age < u8::MIN as i64 {
-                                        u8::MIN
-                                    } else {
-                                        resp.age as u8
-                                    }
-                                }),
+                                age: Some(resp.age as u64),
                                 ..Default::default()
                             },
                         })
@@ -1162,13 +1154,9 @@ impl CallApiTrait for OnebotV11ReverseWsBot {
                 match resp.data {
                     onebot_v11::api::resp::ApiRespData::GetLoginInfoResponse(resp) => {
                         Ok(BotGetProfileResponse {
-                            profile: User {
-                                id: resp.user_id.to_string(),
-                                profile: Some(UserProfile {
-                                    nickname: Some(resp.nickname),
-                                    ..Default::default()
-                                }),
-                                group_info: None,
+                            profile: UserProfile {
+                                nickname: Some(resp.nickname),
+                                ..Default::default()
                             },
                         })
                     }
@@ -1261,15 +1249,15 @@ impl CallApiTrait for OnebotV11ReverseWsBot {
                                 .map(|g| oxidebot::source::group::Group {
                                     id: g.group_id.to_string(),
                                     profile: Some(oxidebot::source::group::GroupProfile {
-                                        name: g.group_name,
+                                        name: Some(g.group_name),
                                         avatar: None,
-                                        member_account: {
+                                        member_count: {
                                             if g.member_count > u64::MAX as i64 {
-                                                u64::MAX
+                                                Some(u64::MAX)
                                             } else if g.member_count < u64::MIN as i64 {
-                                                u64::MIN
+                                                Some(u64::MIN)
                                             } else {
-                                                g.member_count as u64
+                                                Some(g.member_count as u64)
                                             }
                                         },
                                     }),

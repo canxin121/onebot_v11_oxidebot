@@ -20,7 +20,6 @@ pub(crate) fn cast_segment(segment: onebot_v11::MessageSegment) -> MessageSegmen
         onebot_v11::MessageSegment::Text { data } => MessageSegment::Text { content: data.text },
         onebot_v11::MessageSegment::Face { data } => MessageSegment::Emoji { id: data.id },
         onebot_v11::MessageSegment::Mface { data } => MessageSegment::Image {
-            id: None,
             file: Some(File {
                 name: data.summary,
                 uri: parse_uri(&data.url),
@@ -58,7 +57,6 @@ pub(crate) fn cast_segment(segment: onebot_v11::MessageSegment) -> MessageSegmen
                 id: None,
             });
             MessageSegment::Image {
-                id: None,
                 file: file,
             }
         }
@@ -71,7 +69,6 @@ pub(crate) fn cast_segment(segment: onebot_v11::MessageSegment) -> MessageSegmen
                 }
             };
             MessageSegment::Audio {
-                id: None,
                 file: Some(File {
                     name: data.file,
                     uri: data.url.and_then(|u| parse_uri(&u)),
@@ -101,11 +98,9 @@ pub(crate) fn cast_segment(segment: onebot_v11::MessageSegment) -> MessageSegmen
                     id: None,
                 })
             },
-            id: None,
             length: None,
         },
         onebot_v11::MessageSegment::File { data } => MessageSegment::File {
-            id: Some(data.file_id),
             file: {
                 let mime = {
                     if let Some(mime) = mime_guess::from_path(&data.file).first() {
