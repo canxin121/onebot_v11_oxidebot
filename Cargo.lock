@@ -564,7 +564,7 @@ dependencies = [
 
 [[package]]
 name = "onebot_v11_oxidebot"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "chrono",

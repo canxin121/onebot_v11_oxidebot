@@ -1,6 +1,6 @@
 [package]
 name = "onebot_v11_oxidebot"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "OnebotV11 Bot for oxidebot framework"
 license = "MIT OR Apache-2.0"
