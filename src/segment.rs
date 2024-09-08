@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
+use onebot_v11::message::segment::{AtData, JsonData, RecordData, VideoData, XmlData};
 use oxidebot::source::{
     message::{File, Message, MessageSegment},
     user::{User, UserProfile},
 };
-use onebot_v11::message::segment::{AtData, JsonData, RecordData, VideoData, XmlData};
 
 pub(crate) fn parse_uri(uri: &str) -> Option<hyper::Uri> {
     if let Ok(uri) = hyper::Uri::from_str(uri) {
@@ -19,7 +19,7 @@ pub(crate) fn cast_segment(segment: onebot_v11::MessageSegment) -> MessageSegmen
     match segment {
         onebot_v11::MessageSegment::Text { data } => MessageSegment::Text { content: data.text },
         onebot_v11::MessageSegment::Face { data } => MessageSegment::Emoji { id: data.id },
-        onebot_v11::MessageSegment::Mface { data } => MessageSegment::Image {
+        onebot_v11::MessageSegment::MFace { data } => MessageSegment::Image {
             file: Some(File {
                 name: data.summary,
                 uri: parse_uri(&data.url),
@@ -56,9 +56,7 @@ pub(crate) fn cast_segment(segment: onebot_v11::MessageSegment) -> MessageSegmen
                 base64: None,
                 id: None,
             });
-            MessageSegment::Image {
-                file: file,
-            }
+            MessageSegment::Image { file: file }
         }
         onebot_v11::MessageSegment::Record { data } => {
             let mime = {

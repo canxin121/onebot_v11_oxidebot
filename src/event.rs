@@ -398,10 +398,10 @@ pub fn parse_event(event: onebot_v11::Event) -> Result<oxidebot::event::Event> {
                         },
                         r#type: {
                             match event.sub_type {
-                                onebot_v11::event::notice::EssenseMessageChangeType::Add => {
+                                onebot_v11::event::notice::EssenceMessageChangeType::Add => {
                                     GroupHightLightChangeType::Set
                                 }
-                                onebot_v11::event::notice::EssenseMessageChangeType::Delete => {
+                                onebot_v11::event::notice::EssenceMessageChangeType::Delete => {
                                     GroupHightLightChangeType::Unset
                                 }
                             }
