@@ -32,7 +32,7 @@ use oxidebot::{
 };
 
 use std::{any::Any, sync::Arc, time::Duration};
-use tokio::sync::mpsc;
+use tokio::sync::broadcast;
 use tracing::warn;
 
 use crate::{
@@ -69,12 +69,12 @@ impl BotTrait for OnebotV11WsBot {
         };
         Box::pin(async move { botinfo })
     }
-    
+
     #[must_use]
     #[allow(clippy::type_complexity, clippy::type_repetition_in_bounds)]
     fn start_sending_events<'life0, 'async_trait>(
         &'life0 self,
-        sender: mpsc::Sender<Matcher>,
+        sender: broadcast::Sender<Matcher>,
     ) -> ::core::pin::Pin<
         Box<dyn ::core::future::Future<Output = ()> + ::core::marker::Send + 'async_trait>,
     >
@@ -89,7 +89,7 @@ impl BotTrait for OnebotV11WsBot {
                     Box::new(EventWrapper(Arc::new(event))),
                     <Self as BotTrait>::clone_box(self),
                 ) {
-                    match sender.send(matcher).await {
+                    match sender.send(matcher) {
                         Ok(_) => {}
                         Err(e) => {
                             tracing::error!("Onebotv11: Failed to send event: {:?}", e);
@@ -99,7 +99,7 @@ impl BotTrait for OnebotV11WsBot {
             }
         })
     }
-
+        
     fn clone_box(&self) -> BotObject {
         Box::new(self.clone())
     }

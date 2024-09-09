@@ -564,7 +564,7 @@ dependencies = [
 
 [[package]]
 name = "onebot_v11_oxidebot"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -586,9 +586,9 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
 name = "oxidebot"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e0d3ab864cf919192eb3eb58c8484b387206a9cd1f657b8822fb989f12b1116"
+checksum = "016a6b2f8bc13670fdb778f3957b97edbae92e6a0dacc6cd0e86d7bfc7b2b9c2"
 dependencies = [
  "anyhow",
  "async-trait",
